@@ -1,21 +1,35 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Linq;
-using System.Net.Http;
-using System.Net.WebSockets;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Microsoft.AspNetCore.Proxy
 {
+    using System;
+    using System.Linq;
+    using System.Net.Http;
+    using System.Net.WebSockets;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Primitives;
+
     internal static class ProxyAdvancedExtensions
     {
-        private static readonly string[] NotForwardedWebSocketHeaders = new[] { "Connection", "Host", "Upgrade", "Sec-WebSocket-Accept", "Sec-WebSocket-Protocol", "Sec-WebSocket-Key", "Sec-WebSocket-Version", "Sec-WebSocket-Extensions" };
+        private static readonly string[] NotForwardedWebSocketHeaders = new[]
+                                                                        {
+                                                                            "Connection",
+                                                                            "Host",
+                                                                            "Upgrade",
+                                                                            "Sec-WebSocket-Accept",
+                                                                            "Sec-WebSocket-Protocol",
+                                                                            "Sec-WebSocket-Key",
+                                                                            "Sec-WebSocket-Version",
+                                                                            "Sec-WebSocket-Extensions"
+                                                                        };
+
         private const int DefaultWebSocketBufferSize = 4096;
+
         private const int StreamCopyBufferSize = 81920;
 
         public static Uri ToWebSocketScheme(this Uri uri)
@@ -44,10 +58,7 @@ namespace Microsoft.AspNetCore.Proxy
 
             var requestMessage = new HttpRequestMessage();
             var requestMethod = request.Method;
-            if (!HttpMethods.IsGet(requestMethod) &&
-                !HttpMethods.IsHead(requestMethod) &&
-                !HttpMethods.IsDelete(requestMethod) &&
-                !HttpMethods.IsTrace(requestMethod))
+            if (!HttpMethods.IsGet(requestMethod) && !HttpMethods.IsHead(requestMethod) && !HttpMethods.IsDelete(requestMethod) && !HttpMethods.IsTrace(requestMethod))
             {
                 var streamContent = new StreamContent(request.Body);
                 requestMessage.Content = streamContent;
@@ -65,6 +76,7 @@ namespace Microsoft.AspNetCore.Proxy
             requestMessage.Headers.Host = uri.Authority;
             requestMessage.RequestUri = uri;
             requestMessage.Method = new HttpMethod(request.Method);
+            requestMessage.Version = new Version(2, 0);
 
             return requestMessage;
         }
@@ -75,10 +87,12 @@ namespace Microsoft.AspNetCore.Proxy
             {
                 throw new ArgumentNullException(nameof(context));
             }
+
             if (destinationUri == null)
             {
                 throw new ArgumentNullException(nameof(destinationUri));
             }
+
             if (!context.WebSockets.IsWebSocketRequest)
             {
                 throw new InvalidOperationException();
@@ -92,7 +106,7 @@ namespace Microsoft.AspNetCore.Proxy
                 {
                     client.Options.AddSubProtocol(protocol);
                 }
-                
+
                 foreach (var headerEntry in context.Request.Headers)
                 {
                     if (!NotForwardedWebSocketHeaders.Contains(headerEntry.Key, StringComparer.OrdinalIgnoreCase))
@@ -146,11 +160,13 @@ namespace Microsoft.AspNetCore.Proxy
                     await destination.CloseOutputAsync(WebSocketCloseStatus.EndpointUnavailable, null, cancellationToken);
                     return;
                 }
+
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await destination.CloseOutputAsync(source.CloseStatus.Value, source.CloseStatusDescription, cancellationToken);
                     return;
                 }
+
                 await destination.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, cancellationToken);
             }
         }
@@ -175,6 +191,11 @@ namespace Microsoft.AspNetCore.Proxy
             }
 
             var response = context.Response;
+            var tailers = responseMessage.TrailingHeaders;
+            foreach (var tailer in tailers)
+            {
+                response.DeclareTrailer(tailer.Key);
+            }
 
             response.StatusCode = (int)responseMessage.StatusCode;
             foreach (var header in responseMessage.Headers)
@@ -193,6 +214,11 @@ namespace Microsoft.AspNetCore.Proxy
             using (var responseStream = await responseMessage.Content.ReadAsStreamAsync())
             {
                 await responseStream.CopyToAsync(response.Body, StreamCopyBufferSize, context.RequestAborted);
+            }
+
+            foreach (var tailer in tailers)
+            {
+                response.AppendTrailer(tailer.Key, new StringValues(tailer.Value.ToArray()));
             }
         }
     }

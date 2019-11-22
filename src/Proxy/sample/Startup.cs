@@ -9,34 +9,50 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Proxy
 {
+    using Microsoft.Extensions.Hosting;
+
     public class Startup
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddProxy(options =>
-            {
-                options.PrepareRequest = (originalRequest, message) =>
-                {
-                    message.Headers.Add("X-Forwarded-Host", originalRequest.Host.Host);
-                    return Task.FromResult(0);
-                };
-            });
+            // services.AddProxy(options =>
+            // {
+            //     options.PrepareRequest = (originalRequest, message) =>
+            //     {
+            //         message.Headers.Add("X-Forwarded-Host", originalRequest.Host.Host);
+            //         return Task.FromResult(0);
+            //     };
+            // });
+            services.AddProxy();
         }
 
         public void Configure(IApplicationBuilder app)
         {
-            app.UseWebSockets().RunProxy(new Uri("https://example.com"));
+            //app.UseWebSockets().RunProxy(new Uri("https://example.com"));
+            app.RunProxy(new Uri("https://localhost:5001"));
         }
 
         public static void Main(string[] args)
         {
-            var host = new WebHostBuilder()
-                .UseKestrel()
-                .UseIISIntegration()
-                .UseStartup<Startup>()
-                .Build();
+            // var host = new WebHostBuilder()
+            //     .UseKestrel()
+            //     .UseIISIntegration()
+            //     .UseStartup<Startup>()
+            //     .Build();
+            // 
+            // host.Run();
 
-            host.Run();
+
+
+            Host.CreateDefaultBuilder()
+                .ConfigureWebHostDefaults(webBuilder =>
+                    {
+                        webBuilder.UseStartup<Startup>();
+                    })
+                
+                .Build().Run();
+
+
         }
     }
 }
