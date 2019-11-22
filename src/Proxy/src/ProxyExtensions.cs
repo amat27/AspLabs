@@ -4,6 +4,8 @@
 namespace Microsoft.AspNetCore.Builder
 {
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Microsoft.AspNetCore.Http;
@@ -13,6 +15,32 @@ namespace Microsoft.AspNetCore.Builder
 
     public static class ProxyExtensions
     {
+        /// <summary>
+        /// Runs proxy forwarding requests to the server specified by base uri.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="baseUri">Destination base uri</param>
+        public static void RunProxy(this IApplicationBuilder app, IEnumerable<Uri> baseUris)
+        {
+            if (app == null)
+            {
+                throw new ArgumentNullException(nameof(app));
+            }
+
+            if (baseUris == null || !baseUris.Any())
+            {
+                throw new ArgumentNullException(nameof(baseUris));
+            }
+
+            var options = new BackendPoolOption();
+
+            options.Options = baseUris.Select(
+                    baseUri => new ProxyOptions() { Scheme = baseUri.Scheme, Host = new HostString(baseUri.Authority), PathBase = baseUri.AbsolutePath, AppendQuery = new QueryString(baseUri.Query) })
+                .ToArray();
+
+            app.UseMiddleware<ProxyMiddleware>(Options.Create(options));
+        }
+
         /// <summary>
         /// Runs proxy forwarding requests to the server specified by base uri.
         /// </summary>
@@ -30,7 +58,8 @@ namespace Microsoft.AspNetCore.Builder
                 throw new ArgumentNullException(nameof(baseUri));
             }
 
-            var options = new ProxyOptions { Scheme = baseUri.Scheme, Host = new HostString(baseUri.Authority), PathBase = baseUri.AbsolutePath, AppendQuery = new QueryString(baseUri.Query) };
+            var options = new BackendPoolOption(
+                new ProxyOptions() { Scheme = baseUri.Scheme, Host = new HostString(baseUri.Authority), PathBase = baseUri.AbsolutePath, AppendQuery = new QueryString(baseUri.Query) });
             app.UseMiddleware<ProxyMiddleware>(Options.Create(options));
         }
 
@@ -53,7 +82,7 @@ namespace Microsoft.AspNetCore.Builder
         /// </summary>
         /// <param name="app"></param>
         /// <param name="options">Proxy options</param>
-        public static void RunProxy(this IApplicationBuilder app, ProxyOptions options)
+        public static void RunProxy(this IApplicationBuilder app, BackendPoolOption options)
         {
             if (app == null)
             {

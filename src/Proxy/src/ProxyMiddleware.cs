@@ -1,26 +1,26 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.Extensions.Options;
-
 namespace Microsoft.AspNetCore.Proxy
 {
+    using System;
+    using System.Linq;
+    using System.Threading.Tasks;
+
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Http.Extensions;
+    using Microsoft.Extensions.Options;
+
     /// <summary>
     /// Proxy Middleware
     /// </summary>
     public class ProxyMiddleware
     {
-        private const int DefaultWebSocketBufferSize = 4096;
-
         private readonly RequestDelegate _next;
-        private readonly ProxyOptions _options;
+        private readonly BackendPoolOption _options;
 
-        public ProxyMiddleware(RequestDelegate next, IOptions<ProxyOptions> options)
+        public ProxyMiddleware(RequestDelegate next, IOptions<BackendPoolOption> options)
         {
             if (next == null)
             {
@@ -30,13 +30,22 @@ namespace Microsoft.AspNetCore.Proxy
             {
                 throw new ArgumentNullException(nameof(options));
             }
-            if (options.Value.Scheme == null)
+
+            if (options.Value == null)
             {
-                throw new ArgumentException("Options parameter must specify scheme.", nameof(options));
+                throw new ArgumentNullException(nameof(options.Value));
             }
-            if (!options.Value.Host.HasValue)
+
+            foreach (var option in options.Value.Options)
             {
-                throw new ArgumentException("Options parameter must specify host.", nameof(options));
+                if (option.Scheme == null)
+                {
+                    throw new ArgumentException("Options parameter must specify scheme.", nameof(options));
+                }
+                if (!option.Host.HasValue)
+                {
+                    throw new ArgumentException("Options parameter must specify host.", nameof(options));
+                }
             }
 
             _next = next;
@@ -50,7 +59,9 @@ namespace Microsoft.AspNetCore.Proxy
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var uri = new Uri(UriHelper.BuildAbsolute(_options.Scheme, _options.Host, _options.PathBase, context.Request.Path, context.Request.QueryString.Add(_options.AppendQuery)));
+            var option = _options.Pick();
+
+            var uri = new Uri(UriHelper.BuildAbsolute(option.Scheme, option.Host, option.PathBase, context.Request.Path, context.Request.QueryString.Add(option.AppendQuery)));
             return context.ProxyRequest(uri);
         }
     }
