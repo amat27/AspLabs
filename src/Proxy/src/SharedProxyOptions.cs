@@ -13,8 +13,6 @@ namespace Microsoft.AspNetCore.Proxy
     /// </summary>
     public class SharedProxyOptions
     {
-        private int? _webSocketBufferSize;
-
         /// <summary>
         /// Message handler used for http message forwarding.
         /// </summary>
@@ -24,26 +22,5 @@ namespace Microsoft.AspNetCore.Proxy
         /// Allows to modify HttpRequestMessage before it is sent to the Message Handler.
         /// </summary>
         public Func<HttpRequest, HttpRequestMessage, Task> PrepareRequest { get; set; }
-
-        /// <summary>
-        /// Keep-alive interval for proxied Web Socket connections.
-        /// </summary>
-        public TimeSpan? WebSocketKeepAliveInterval { get; set; }
-
-        /// <summary>
-        /// Internal send and receive buffers size for proxied Web Socket connections.
-        /// </summary>
-        public int? WebSocketBufferSize
-        {
-            get { return _webSocketBufferSize; }
-            set
-            {
-                if (value.HasValue && value.Value <= 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value));
-                }
-                _webSocketBufferSize = value;
-            }
-        }
     }
 }

@@ -1,11 +1,12 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using Microsoft.AspNetCore.Proxy;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
+    using System;
+
+    using Microsoft.AspNetCore.Proxy;
+
     public static class ProxyServiceCollectionExtensions
     {
         public static IServiceCollection AddProxy(this IServiceCollection services)
@@ -15,7 +16,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(services));
             }
 
-            return services.AddSingleton<ProxyService>();
+            return services.AddSingleton<GrpcBrokerService>();
         }
 
         public static IServiceCollection AddProxy(this IServiceCollection services, Action<SharedProxyOptions> configureOptions)
@@ -30,7 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             services.Configure(configureOptions);
-            return services.AddSingleton<ProxyService>();
+            return services.AddSingleton<GrpcBrokerService>();
         }
     }
 }

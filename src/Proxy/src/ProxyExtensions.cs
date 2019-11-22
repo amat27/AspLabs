@@ -1,15 +1,16 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Proxy;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-
 namespace Microsoft.AspNetCore.Builder
 {
+    using System;
+    using System.Threading.Tasks;
+
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Proxy;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Options;
+
     public static class ProxyExtensions
     {
         /// <summary>
@@ -23,18 +24,13 @@ namespace Microsoft.AspNetCore.Builder
             {
                 throw new ArgumentNullException(nameof(app));
             }
+
             if (baseUri == null)
             {
                 throw new ArgumentNullException(nameof(baseUri));
             }
 
-            var options = new ProxyOptions
-            {
-                Scheme = baseUri.Scheme,
-                Host = new HostString(baseUri.Authority),
-                PathBase = baseUri.AbsolutePath,
-                AppendQuery = new QueryString(baseUri.Query)
-            };
+            var options = new ProxyOptions { Scheme = baseUri.Scheme, Host = new HostString(baseUri.Authority), PathBase = baseUri.AbsolutePath, AppendQuery = new QueryString(baseUri.Query) };
             app.UseMiddleware<ProxyMiddleware>(Options.Create(options));
         }
 
@@ -63,6 +59,7 @@ namespace Microsoft.AspNetCore.Builder
             {
                 throw new ArgumentNullException(nameof(app));
             }
+
             if (options == null)
             {
                 throw new ArgumentNullException(nameof(options));
@@ -82,31 +79,25 @@ namespace Microsoft.AspNetCore.Builder
             {
                 throw new ArgumentNullException(nameof(context));
             }
+
             if (destinationUri == null)
             {
                 throw new ArgumentNullException(nameof(destinationUri));
             }
 
-            if (context.WebSockets.IsWebSocketRequest)
-            {
-                await context.AcceptProxyWebSocketRequest(destinationUri.ToWebSocketScheme());
-            }
-            else
-            {
-                var proxyService = context.RequestServices.GetRequiredService<ProxyService>();
+            var proxyService = context.RequestServices.GetRequiredService<GrpcBrokerService>();
 
-                using (var requestMessage = context.CreateProxyHttpRequest(destinationUri))
+            using (var requestMessage = context.CreateProxyHttpRequest(destinationUri))
+            {
+                var prepareRequestHandler = proxyService.Options.PrepareRequest;
+                if (prepareRequestHandler != null)
                 {
-                    var prepareRequestHandler = proxyService.Options.PrepareRequest;
-                    if (prepareRequestHandler != null)
-                    {
-                        await prepareRequestHandler(context.Request, requestMessage);
-                    }
+                    await prepareRequestHandler(context.Request, requestMessage);
+                }
 
-                    using (var responseMessage = await context.SendProxyHttpRequest(requestMessage))
-                    {
-                        await context.CopyProxyHttpResponse(responseMessage);
-                    }
+                using (var responseMessage = await context.SendProxyHttpRequest(requestMessage))
+                {
+                    await context.CopyProxyHttpResponse(responseMessage);
                 }
             }
         }

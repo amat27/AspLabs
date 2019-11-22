@@ -1,15 +1,16 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using System.Net.Http;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Proxy
 {
-    public class ProxyService
+    using System;
+    using System.Net.Http;
+
+    using Microsoft.Extensions.Options;
+
+    public class GrpcBrokerService
     {
-        public ProxyService(IOptions<SharedProxyOptions> options)
+        public GrpcBrokerService(IOptions<SharedProxyOptions> options)
         {
             if (options == null)
             {

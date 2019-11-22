@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -19,8 +19,6 @@ namespace Microsoft.AspNetCore.Proxy
 
         private readonly RequestDelegate _next;
         private readonly ProxyOptions _options;
-
-        private static readonly string[] NotForwardedWebSocketHeaders = new[] { "Connection", "Host", "Upgrade", "Sec-WebSocket-Key", "Sec-WebSocket-Version" };
 
         public ProxyMiddleware(RequestDelegate next, IOptions<ProxyOptions> options)
         {
