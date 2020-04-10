@@ -21,6 +21,8 @@ namespace Microsoft.AspNetCore.Proxy
 
         public ProxyOptions[] Options { get; set; }
 
+        public bool Throttling { get; set; } = true;
+
         public ProxyOptions Pick()
         {
             var res = this.Options[i];
